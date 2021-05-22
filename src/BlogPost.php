@@ -3,7 +3,10 @@
 
 namespace Webdevils\Blog;
 
+use DateTimeImmutable;
 use Webdevils\Blog\Exceptions\InvalidBlogPost;
+use Webdevils\Blog\Status\Draft;
+use Webdevils\Blog\Status\Status;
 
 class BlogPost
 {
@@ -19,6 +22,8 @@ class BlogPost
     private string $title;
     private string $introduction;
     private string $content;
+
+    private Status $status;
 
     protected function validate(
         string $title,
@@ -54,6 +59,8 @@ class BlogPost
         $this->title = $title;
         $this->introduction = $introduction;
         $this->content = $content;
+
+        $this->status = new Draft();
     }
 
     public function getAuthor() : Author
@@ -79,5 +86,25 @@ class BlogPost
     public function getContent() : string
     {
         return $this->content;
+    }
+
+    public function getStatus() : string
+    {
+        return $this->status->getName();
+    }
+
+    public function getPublishDate() : ?DateTimeImmutable
+    {
+        return $this->status->getPublishDate();
+    }
+
+    public function schedule(DateTimeImmutable $publishDate) : void
+    {
+        $this->status = $this->status->schedule($publishDate);
+    }
+
+    public function publish() : void
+    {
+        $this->status = $this->status->publish();
     }
 }
