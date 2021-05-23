@@ -26,5 +26,9 @@
     "psr-4": {
       "Tests\\": "tests/"
     }
+  },
+  "require": {
+    "league/commonmark": "^1.6",
+    "ezyang/htmlpurifier": "^4.13"
   }
 }

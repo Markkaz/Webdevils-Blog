@@ -10,6 +10,7 @@ use Webdevils\Blog\Category;
 use Webdevils\Blog\Exceptions\InvalidBlogPost;
 use Webdevils\Blog\Exceptions\PublishError;
 use Webdevils\Blog\Exceptions\ScheduleError;
+use Webdevils\Blog\Parsers\Parser;
 use Webdevils\Blog\Status\Draft;
 use Webdevils\Blog\Status\Published;
 use Webdevils\Blog\Status\Scheduled;
@@ -20,8 +21,16 @@ class BlogPostTest extends TestCase
         string $title = 'My first blog post',
         string $introduction = 'A short introduction to the BlogPost',
         string $content = 'The content of the full article',
+        Parser $parser = null
     ): BlogPost {
+        if ($parser == null) {
+            $parser = $this->createStub(Parser::class);
+            $parser->method('parse')
+                ->will($this->returnArgument(0));
+        }
+
         return new BlogPost(
+            parser: $parser,
             author: new Author('Mark'),
             category: new Category('PHP'),
             title: $title,
@@ -195,5 +204,30 @@ class BlogPostTest extends TestCase
         $blogPost = $this->createBlogPost();
         $blogPost->publish();
         $blogPost->publish();
+    }
+
+    /** @test */
+    public function the_introduction_is_parsed()
+    {
+        $parser = $this->createStub(Parser::class);
+        $parser->method('parse')
+            ->willReturn('Parsed introduction');
+
+        $blogPost = $this->createBlogPost(parser: $parser);
+
+        $this->assertEquals('Parsed introduction', $blogPost->getIntroduction());
+    }
+
+    /** @test */
+    public function the_content_is_parsed()
+    {
+        $parser = $this->createStub(Parser::class);
+        $parser->method('parse')
+            ->willReturn('Parsed content');
+
+        $blogPost = $this->createBlogPost(
+            parser: $parser,
+        );
+        $this->assertEquals('Parsed content', $blogPost->getContent());
     }
 }

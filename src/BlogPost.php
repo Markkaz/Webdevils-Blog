@@ -5,6 +5,7 @@ namespace Webdevils\Blog;
 
 use DateTimeImmutable;
 use Webdevils\Blog\Exceptions\InvalidBlogPost;
+use Webdevils\Blog\Parsers\Parser;
 use Webdevils\Blog\Status\Draft;
 use Webdevils\Blog\Status\Status;
 
@@ -24,6 +25,7 @@ class BlogPost
     private string $content;
 
     private Status $status;
+    private Parser $parser;
 
     protected function validate(
         string $title,
@@ -46,6 +48,7 @@ class BlogPost
     }
 
     public function __construct(
+        Parser $parser,
         Author $author,
         Category $category,
         string $title,
@@ -61,6 +64,7 @@ class BlogPost
         $this->content = $content;
 
         $this->status = new Draft();
+        $this->parser = $parser;
     }
 
     public function getAuthor() : Author
@@ -80,12 +84,12 @@ class BlogPost
 
     public function getIntroduction() : string
     {
-        return $this->introduction;
+        return $this->parser->parse($this->introduction);
     }
 
     public function getContent() : string
     {
-        return $this->content;
+        return $this->parser->parse($this->content);
     }
 
     public function getStatus() : string
