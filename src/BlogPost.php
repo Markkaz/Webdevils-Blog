@@ -18,6 +18,7 @@ class BlogPost
     const MIN_INTRODUCTION_CHARS = 25;
     const MIN_CONTENT_CHARS = 25;
 
+    private Slug $slug;
     private Author $author;
     private Category $category;
     private string $title;
@@ -48,6 +49,7 @@ class BlogPost
     }
 
     public function __construct(
+        SlugGenerator $generator,
         Parser $parser,
         Author $author,
         Category $category,
@@ -57,6 +59,7 @@ class BlogPost
     ) {
         $this->validate($title, $introduction, $content);
 
+        $this->slug = $generator->generate($title);
         $this->author = $author;
         $this->category = $category;
         $this->title = $title;
@@ -65,6 +68,11 @@ class BlogPost
 
         $this->status = new Draft();
         $this->parser = $parser;
+    }
+
+    public function getSlug() : Slug
+    {
+        return $this->slug;
     }
 
     public function getAuthor() : Author

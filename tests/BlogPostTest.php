@@ -11,6 +11,8 @@ use Webdevils\Blog\Exceptions\InvalidBlogPost;
 use Webdevils\Blog\Exceptions\PublishError;
 use Webdevils\Blog\Exceptions\ScheduleError;
 use Webdevils\Blog\Parsers\Parser;
+use Webdevils\Blog\Slug;
+use Webdevils\Blog\SlugGenerator;
 use Webdevils\Blog\Status\Draft;
 use Webdevils\Blog\Status\Published;
 use Webdevils\Blog\Status\Scheduled;
@@ -18,25 +20,43 @@ use Webdevils\Blog\Status\Scheduled;
 class BlogPostTest extends TestCase
 {
     protected function createBlogPost(
+        string $slug = 'my-first-blog-post',
         string $title = 'My first blog post',
         string $introduction = 'A short introduction to the BlogPost',
         string $content = 'The content of the full article',
+        SlugGenerator $generator = null,
         Parser $parser = null
     ): BlogPost {
-        if ($parser == null) {
+        if ($generator === null) {
+            $generator = $this->createStub(SlugGenerator::class);
+            $generator->method('generate')
+                ->willReturn(new Slug($slug));
+        }
+
+        if ($parser === null) {
             $parser = $this->createStub(Parser::class);
             $parser->method('parse')
                 ->will($this->returnArgument(0));
         }
 
         return new BlogPost(
+            generator: $generator,
             parser: $parser,
             author: new Author('Mark'),
-            category: new Category('PHP'),
+            category: $this->createCategory(),
             title: $title,
             introduction: $introduction,
             content: $content,
         );
+    }
+
+    protected function createCategory() : Category
+    {
+        $generator = $this->createStub(SlugGenerator::class);
+        $generator->method('generate')
+            ->willReturn(new Slug('php'));
+
+        return new Category($generator, 'PHP');
     }
 
     /** @test */
@@ -45,10 +65,27 @@ class BlogPostTest extends TestCase
         $blogPost = $this->createBlogPost();
 
         $this->assertEquals(new Author('Mark'), $blogPost->getAuthor());
-        $this->assertEquals(new Category('PHP'), $blogPost->getCategory());
+        $this->assertEquals($this->createCategory(), $blogPost->getCategory());
         $this->assertEquals('My first blog post', $blogPost->getTitle());
         $this->assertEquals('A short introduction to the BlogPost', $blogPost->getIntroduction());
         $this->assertEquals('The content of the full article', $blogPost->getContent());
+    }
+
+    /** @test */
+    public function a_blogpost_generates_a_slug()
+    {
+        $generator = $this->createMock(SlugGenerator::class);
+        $generator->expects($this->once())
+            ->method('generate')
+            ->with('My first blog post')
+            ->willReturn(new Slug('my-first-blog-post'));
+
+        $blogPost = $this->createBlogPost(generator: $generator);
+
+        $this->assertEquals(
+            new Slug('my-first-blog-post'),
+            $blogPost->getSlug()
+        );
     }
 
     /** @test */
