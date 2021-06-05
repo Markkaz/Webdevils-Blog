@@ -4,6 +4,8 @@
 namespace Webdevils\Blog\Status;
 
 use DateTimeImmutable;
+use Webdevils\Blog\Author;
+use Webdevils\Blog\Slug;
 
 class Draft implements Status
 {
@@ -27,5 +29,23 @@ class Draft implements Status
     public function schedule(DateTimeImmutable $publishDate): Status
     {
         return new Scheduled($publishDate);
+    }
+
+    public function addOldSlug(Slug $slug): void
+    {
+    }
+
+    public function getOldSlugs(): array
+    {
+        return [];
+    }
+
+    public function addAuthor(array $authors, Author $author): array
+    {
+        if (!in_array($author, $authors)) {
+            $authors[] = $author;
+        }
+
+        return $authors;
     }
 }

@@ -13,6 +13,7 @@ use Webdevils\Blog\Exceptions\ScheduleError;
 use Webdevils\Blog\Parsers\Parser;
 use Webdevils\Blog\Slug;
 use Webdevils\Blog\SlugGenerator;
+use Webdevils\Blog\SlugRepository;
 use Webdevils\Blog\Status\Draft;
 use Webdevils\Blog\Status\Published;
 use Webdevils\Blog\Status\Scheduled;
@@ -20,18 +21,12 @@ use Webdevils\Blog\Status\Scheduled;
 class BlogPostTest extends TestCase
 {
     protected function createBlogPost(
-        string $slug = 'my-first-blog-post',
         string $title = 'My first blog post',
         string $introduction = 'A short introduction to the BlogPost',
         string $content = 'The content of the full article',
-        SlugGenerator $generator = null,
         Parser $parser = null
     ): BlogPost {
-        if ($generator === null) {
-            $generator = $this->createStub(SlugGenerator::class);
-            $generator->method('generate')
-                ->willReturn(new Slug($slug));
-        }
+        $generator = $this->createSlugGenerator();
 
         if ($parser === null) {
             $parser = $this->createStub(Parser::class);
@@ -59,12 +54,19 @@ class BlogPostTest extends TestCase
         return new Category($generator, 'PHP');
     }
 
+    protected function createSlugGenerator(): SlugGenerator
+    {
+        $repository = $this->createStub(SlugRepository::class);
+        $repository->method('exists')->willReturn(false);
+        return new SlugGenerator($repository);
+    }
+
     /** @test */
     public function can_create_a_new_blogpost()
     {
         $blogPost = $this->createBlogPost();
 
-        $this->assertEquals(new Author('Mark'), $blogPost->getAuthor());
+        $this->assertEquals([new Author('Mark')], $blogPost->getAuthors());
         $this->assertEquals($this->createCategory(), $blogPost->getCategory());
         $this->assertEquals('My first blog post', $blogPost->getTitle());
         $this->assertEquals('A short introduction to the BlogPost', $blogPost->getIntroduction());
@@ -74,13 +76,7 @@ class BlogPostTest extends TestCase
     /** @test */
     public function a_blogpost_generates_a_slug()
     {
-        $generator = $this->createMock(SlugGenerator::class);
-        $generator->expects($this->once())
-            ->method('generate')
-            ->with('My first blog post')
-            ->willReturn(new Slug('my-first-blog-post'));
-
-        $blogPost = $this->createBlogPost(generator: $generator);
+        $blogPost = $this->createBlogPost();
 
         $this->assertEquals(
             new Slug('my-first-blog-post'),
@@ -94,6 +90,13 @@ class BlogPostTest extends TestCase
         $blogPost = $this->createBlogPost();
 
         $this->assertEquals(Draft::NAME, $blogPost->getStatus());
+    }
+
+    /** @test */
+    public function a_new_blogpost_has_no_old_slugs()
+    {
+        $blogPost = $this->createBlogPost();
+        $this->assertEquals([], $blogPost->getOldSlugs());
     }
 
     /** @test */
@@ -266,5 +269,203 @@ class BlogPostTest extends TestCase
             parser: $parser,
         );
         $this->assertEquals('Parsed content', $blogPost->getContent());
+    }
+
+    /** @test */
+    public function can_update_a_blog_post()
+    {
+        $blogPost = $this->createBlogPost();
+
+        $blogPost->update(
+            author: new Author('Mark'),
+            title: 'New title',
+            introduction: 'New introduction to the blog post',
+            content: 'New content for the blog post!'
+        );
+
+        $this->assertEquals('New title', $blogPost->getTitle());
+        $this->assertEquals('New introduction to the blog post', $blogPost->getIntroduction());
+        $this->assertEquals('New content for the blog post!', $blogPost->getContent());
+    }
+
+    /** @test */
+    public function can_only_update_with_valid_fields()
+    {
+        $blogPost = $this->createBlogPost();
+
+        try {
+            $blogPost->update(
+                new Author('Mark'),
+                title: '',
+                introduction: '',
+                content: ''
+            );
+
+            $this->fail('Should throw InvalidBlogPost exception');
+        } catch (InvalidBlogPost $e) {
+            $this->assertArrayHasKey('title', $e->getErrors());
+            $this->assertArrayHasKey('introduction', $e->getErrors());
+            $this->assertArrayHasKey('content', $e->getErrors());
+        }
+    }
+
+    /** @test */
+    public function slug_is_updated_when_updating_a_draft_blogpost()
+    {
+        $blogPost = $this->createBlogPost();
+
+        $blogPost->update(
+            author: new Author('Mark'),
+            title: 'New title',
+            introduction: $blogPost->getIntroduction(),
+            content: $blogPost->getContent()
+        );
+
+        $this->assertEquals(
+            new Slug('new-title'),
+            $blogPost->getSlug()
+        );
+        $this->assertEquals([], $blogPost->getOldSlugs());
+    }
+
+    /** @test */
+    public function slug_is_updated_when_updating_a_scheduled_blogpost()
+    {
+        $nextWeek = new DateTimeImmutable('+1 week');
+        $blogPost = $this->createBlogPost();
+        $blogPost->schedule($nextWeek);
+
+        $blogPost->update(
+            author: new Author('Mark'),
+            title: 'New title',
+            introduction: $blogPost->getIntroduction(),
+            content: $blogPost->getContent()
+        );
+
+        $this->assertEquals(
+            new Slug('new-title'),
+            $blogPost->getSlug()
+        );
+        $this->assertEquals([], $blogPost->getOldSlugs());
+    }
+
+    /** @test */
+    public function slug_is_updated_and_old_slug_is_stored_when_updating_a_published_blogpost()
+    {
+        $blogPost = $this->createBlogPost();
+        $blogPost->publish();
+
+        $blogPost->update(
+            author: new Author('Mark'),
+            title: 'New title',
+            introduction: $blogPost->getIntroduction(),
+            content: $blogPost->getContent()
+        );
+
+        $this->assertEquals(
+            new Slug('new-title'),
+            $blogPost->getSlug()
+        );
+        $this->assertEquals(
+            [new Slug('my-first-blog-post')],
+            $blogPost->getOldSlugs()
+        );
+    }
+
+    /** @test */
+    public function when_updating_without_changing_title_slug_shouldnt_regenerate()
+    {
+        $blogPost = $this->createBlogPost();
+        $blogPost->publish();
+
+        $oldSlug = $blogPost->getSlug();
+
+        $blogPost->update(
+            author: new Author('Mark'),
+            title: $blogPost->getTitle(),
+            introduction: 'A new introduction to an old blog post',
+            content: 'New content to an old blog post'
+        );
+
+        $this->assertEquals(
+            $oldSlug,
+            $blogPost->getSlug()
+        );
+        $this->assertEquals([], $blogPost->getOldSlugs());
+    }
+
+    /** @test */
+    public function author_is_added_when_updating_a_draft_blogpost()
+    {
+        $blogPost = $this->createBlogPost();
+
+        $blogPost->update(
+            author: new Author('John Doe'),
+            title: 'New title',
+            introduction: $blogPost->getIntroduction(),
+            content: $blogPost->getContent()
+        );
+
+        $this->assertEquals(
+            [
+                new Author('Mark'),
+                new Author('John Doe')
+            ],
+            $blogPost->getAuthors()
+        );
+    }
+
+    /** @test */
+    public function authors_are_only_once_in_the_list_after_updating_a_draft_blogpost()
+    {
+        $blogPost = $this->createBlogPost();
+
+        $blogPost->update(
+            author: new Author('Mark'),
+            title: 'New title',
+            introduction: $blogPost->getIntroduction(),
+            content: $blogPost->getContent()
+        );
+
+        $this->assertEquals([new Author('Mark')], $blogPost->getAuthors());
+    }
+
+    /** @test */
+    public function no_authors_added_when_updating_a_scheduled_blogpost()
+    {
+        $nextWeek = new DateTimeImmutable('+1 week');
+        $blogPost = $this->createBlogPost();
+        $blogPost->schedule($nextWeek);
+
+        $blogPost->update(
+            author: new Author('Antony'),
+            title: 'New title',
+            introduction: $blogPost->getIntroduction(),
+            content: $blogPost->getContent()
+        );
+
+        $this->assertEquals(
+            [new Author('Mark')],
+            $blogPost->getAuthors()
+        );
+    }
+
+    /** @test */
+    public function no_authors_added_when_updating_a_published_blogpost()
+    {
+        $blogPost = $this->createBlogPost();
+        $blogPost->publish();
+
+        $blogPost->update(
+            author: new Author('Antony'),
+            title: 'New title',
+            introduction: $blogPost->getIntroduction(),
+            content: $blogPost->getContent()
+        );
+
+        $this->assertEquals(
+            [new Author('Mark')],
+            $blogPost->getAuthors()
+        );
     }
 }

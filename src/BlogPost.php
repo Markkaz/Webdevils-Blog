@@ -19,7 +19,7 @@ class BlogPost
     const MIN_CONTENT_CHARS = 25;
 
     private Slug $slug;
-    private Author $author;
+    private array $authors = [];
     private Category $category;
     private string $title;
     private string $introduction;
@@ -27,6 +27,7 @@ class BlogPost
 
     private Status $status;
     private Parser $parser;
+    private SlugGenerator $generator;
 
     protected function validate(
         string $title,
@@ -59,8 +60,10 @@ class BlogPost
     ) {
         $this->validate($title, $introduction, $content);
 
-        $this->slug = $generator->generate($title);
-        $this->author = $author;
+        $this->generator = $generator;
+
+        $this->slug = $this->generator->generate($title);
+        $this->authors[] = $author;
         $this->category = $category;
         $this->title = $title;
         $this->introduction = $introduction;
@@ -75,9 +78,14 @@ class BlogPost
         return $this->slug;
     }
 
-    public function getAuthor() : Author
+    public function getOldSlugs() : array
     {
-        return $this->author;
+        return $this->status->getOldSlugs();
+    }
+
+    public function getAuthors() : array
+    {
+        return $this->authors;
     }
 
     public function getCategory() : Category
@@ -118,5 +126,21 @@ class BlogPost
     public function publish() : void
     {
         $this->status = $this->status->publish();
+    }
+
+    public function update(Author $author, string $title, string $introduction, string $content) : void
+    {
+        $this->validate($title, $introduction, $content);
+
+        $this->authors = $this->status->addAuthor($this->getAuthors(), $author);
+
+        if ($title !== $this->getTitle()) {
+            $this->status->addOldSlug($this->slug);
+            $this->slug = $this->generator->generate($title);
+        }
+
+        $this->title = $title;
+        $this->introduction = $introduction;
+        $this->content = $content;
     }
 }

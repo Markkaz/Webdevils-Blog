@@ -4,7 +4,9 @@
 namespace Webdevils\Blog\Status;
 
 use DateTimeImmutable;
+use Webdevils\Blog\Author;
 use Webdevils\Blog\Exceptions\ScheduleError;
+use Webdevils\Blog\Slug;
 
 class Scheduled implements Status
 {
@@ -40,5 +42,19 @@ class Scheduled implements Status
     public function schedule(DateTimeImmutable $publishDate): Status
     {
         return new Scheduled($publishDate);
+    }
+
+    public function addOldSlug(Slug $slug): void
+    {
+    }
+
+    public function getOldSlugs(): array
+    {
+        return [];
+    }
+
+    public function addAuthor(array $authors, Author $author): array
+    {
+        return $authors;
     }
 }
