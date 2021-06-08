@@ -6,6 +6,7 @@ namespace Webdevils\Blog;
 use DateTimeImmutable;
 use Webdevils\Blog\Exceptions\InvalidBlogPost;
 use Webdevils\Blog\Parsers\Parser;
+use Webdevils\Blog\Slug\SlugGenerator;
 use Webdevils\Blog\Status\Draft;
 use Webdevils\Blog\Status\Status;
 
@@ -18,8 +19,9 @@ class BlogPost
     const MIN_INTRODUCTION_CHARS = 25;
     const MIN_CONTENT_CHARS = 25;
 
+    private ?string $id = null;
     private Slug $slug;
-    private array $authors = [];
+    private array $authors;
     private Category $category;
     private string $title;
     private string $introduction;
@@ -29,19 +31,19 @@ class BlogPost
     private Parser $parser;
     private SlugGenerator $generator;
 
-    protected function validate(
+    protected static function validate(
         string $title,
         string $introduction,
         string $content
     ): void {
         $errors = [];
-        if ($this->isTooShort($title, self::MIN_TITLE_CHARS) || $this->isTooLong($title, self::MAX_TITLE_CHARS)) {
+        if (self::isTooShort($title, self::MIN_TITLE_CHARS) || self::isTooLong($title, self::MAX_TITLE_CHARS)) {
             $errors['title'] = 'Title must be between 3 and 70 characters';
         }
-        if ($this->isTooShort($introduction, self::MIN_INTRODUCTION_CHARS)) {
+        if (self::isTooShort($introduction, self::MIN_INTRODUCTION_CHARS)) {
             $errors['introduction'] = 'Introduction must be minimum 25 characters long';
         }
-        if ($this->isTooShort($content, self::MIN_CONTENT_CHARS)) {
+        if (self::isTooShort($content, self::MIN_CONTENT_CHARS)) {
             $errors['content'] = 'Content must be minimum 25 characters long';
         }
         if (count($errors) > 0) {
@@ -49,7 +51,29 @@ class BlogPost
         }
     }
 
-    public function __construct(
+    private function __construct(
+        SlugGenerator $generator,
+        Slug $slug,
+        array $authors,
+        Category $category,
+        string $title,
+        string $introduction,
+        string $content,
+        Status $status,
+        Parser $parser,
+    ) {
+        $this->generator = $generator;
+        $this->slug = $slug;
+        $this->authors = $authors;
+        $this->category = $category;
+        $this->title = $title;
+        $this->introduction = $introduction;
+        $this->content = $content;
+        $this->status = $status;
+        $this->parser = $parser;
+    }
+
+    public static function create(
         SlugGenerator $generator,
         Parser $parser,
         Author $author,
@@ -57,20 +81,58 @@ class BlogPost
         string $title,
         string $introduction,
         string $content,
-    ) {
-        $this->validate($title, $introduction, $content);
+    ) : BlogPost {
+        self::validate($title, $introduction, $content);
 
-        $this->generator = $generator;
+        return new BlogPost(
+            $generator,
+            $generator->generate($title),
+            [$author],
+            $category,
+            $title,
+            $introduction,
+            $content,
+            new Draft(),
+            $parser
+        );
+    }
 
-        $this->slug = $this->generator->generate($title);
-        $this->authors[] = $author;
-        $this->category = $category;
-        $this->title = $title;
-        $this->introduction = $introduction;
-        $this->content = $content;
+    public static function hydrate(
+        string $id,
+        SlugGenerator $generator,
+        Slug $slug,
+        array $authors,
+        Category $category,
+        string $title,
+        string $introduction,
+        string $content,
+        Status $status,
+        Parser $parser,
+    ) : BlogPost {
+        $blogPost = new BlogPost(
+            $generator,
+            $slug,
+            $authors,
+            $category,
+            $title,
+            $introduction,
+            $content,
+            $status,
+            $parser
+        );
+        $blogPost->setId($id);
 
-        $this->status = new Draft();
-        $this->parser = $parser;
+        return $blogPost;
+    }
+
+    public function setId(string $id)
+    {
+        $this->id = $id;
+    }
+
+    public function getId() : ?string
+    {
+        return $this->id;
     }
 
     public function getSlug() : Slug
@@ -116,6 +178,11 @@ class BlogPost
     public function getPublishDate() : ?DateTimeImmutable
     {
         return $this->status->getPublishDate();
+    }
+
+    public function getParserName() : string
+    {
+        return $this->parser->getName();
     }
 
     public function schedule(DateTimeImmutable $publishDate) : void

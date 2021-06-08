@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests;
+namespace Tests\Unit;
 
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
@@ -12,8 +12,8 @@ use Webdevils\Blog\Exceptions\PublishError;
 use Webdevils\Blog\Exceptions\ScheduleError;
 use Webdevils\Blog\Parsers\Parser;
 use Webdevils\Blog\Slug;
-use Webdevils\Blog\SlugGenerator;
-use Webdevils\Blog\SlugRepository;
+use Webdevils\Blog\Slug\SlugGenerator;
+use Webdevils\Blog\Slug\SlugRepository;
 use Webdevils\Blog\Status\Draft;
 use Webdevils\Blog\Status\Published;
 use Webdevils\Blog\Status\Scheduled;
@@ -34,7 +34,7 @@ class BlogPostTest extends TestCase
                 ->will($this->returnArgument(0));
         }
 
-        return new BlogPost(
+        return BlogPost::create(
             generator: $generator,
             parser: $parser,
             author: new Author('Mark'),
@@ -51,7 +51,7 @@ class BlogPostTest extends TestCase
         $generator->method('generate')
             ->willReturn(new Slug('php'));
 
-        return new Category($generator, 'PHP');
+        return Category::create($generator, 'PHP');
     }
 
     protected function createSlugGenerator(): SlugGenerator

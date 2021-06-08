@@ -14,15 +14,24 @@ class Scheduled implements Status
 
     private DateTimeImmutable $publishDate;
 
-    public function __construct(DateTimeImmutable $publishDate)
+    private function __construct(DateTimeImmutable $publishDate)
+    {
+        $this->publishDate = $publishDate;
+    }
+
+    public static function create(DateTimeImmutable $publishDate) : Scheduled
     {
         if (new DateTimeImmutable('now') >= $publishDate) {
             throw new ScheduleError('Can only schedule a blog post in the future');
         }
 
-        $this->publishDate = $publishDate;
+        return new Scheduled($publishDate);
     }
 
+    public static function hydrate(DateTimeImmutable $publishDate) : Scheduled
+    {
+        return new Scheduled($publishDate);
+    }
 
     public function getName(): string
     {
@@ -36,12 +45,12 @@ class Scheduled implements Status
 
     public function publish(): Status
     {
-        return new Published();
+        return Published::create();
     }
 
     public function schedule(DateTimeImmutable $publishDate): Status
     {
-        return new Scheduled($publishDate);
+        return Scheduled::create($publishDate);
     }
 
     public function addOldSlug(Slug $slug): void

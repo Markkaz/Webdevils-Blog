@@ -1,7 +1,17 @@
 <phpunit bootstrap="vendor/autoload.php">
+    <php>
+        <var name="DB_TYPE" value="pgsql" />
+        <var name="DB_HOST" value="localhost" />
+        <var name="DB_USER" value="homestead" />
+        <var name="DB_PASSWORD" value="secret" />
+        <var name="DB_NAME" value="homestead" />
+    </php>
     <testsuites>
-        <testsuite name="blog">
-            <directory>tests</directory>
+        <testsuite name="Unit">
+            <directory>./tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Database">
+            <directory>./tests/Database</directory>
         </testsuite>
     </testsuites>
 </phpunit>

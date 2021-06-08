@@ -1,7 +1,9 @@
 <?php
 
 
-namespace Webdevils\Blog;
+namespace Webdevils\Blog\Slug;
+
+use Webdevils\Blog\Slug;
 
 interface SlugRepository
 {

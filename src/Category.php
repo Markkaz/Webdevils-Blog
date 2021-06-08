@@ -4,6 +4,7 @@
 namespace Webdevils\Blog;
 
 use Webdevils\Blog\Exceptions\InvalidCategory;
+use Webdevils\Blog\Slug\SlugGenerator;
 
 class Category
 {
@@ -15,17 +16,30 @@ class Category
     private Slug $slug;
     private string $name;
 
-    public function __construct(SlugGenerator $generator, string $name)
+    private function __construct(Slug $slug, string $name)
     {
-        if ($this->isTooShort($name, self::MIN_NAME_LENGTH)) {
+        $this->slug = $slug;
+        $this->name = $name;
+    }
+
+    public static function create(SlugGenerator $generator, string $name) : Category
+    {
+        if (self::isTooShort($name, self::MIN_NAME_LENGTH)) {
             throw new InvalidCategory('Category name must be minimum '.self::MIN_NAME_LENGTH.' characters');
         }
-        if ($this->isTooLong($name, self::MAX_NAME_LENGTH)) {
+        if (self::isTooLong($name, self::MAX_NAME_LENGTH)) {
             throw new InvalidCategory('Category name must be maximum '.self::MAX_NAME_LENGTH.' characters');
         }
 
-        $this->slug = $generator->generate($name);
-        $this->name = $name;
+        return new Category(
+            $generator->generate($name),
+            $name
+        );
+    }
+
+    public static function hydrate($slug, $name) : Category
+    {
+        return new Category($slug, $name);
     }
 
     public function getSlug() : Slug

@@ -23,12 +23,12 @@ class Draft implements Status
 
     public function publish(): Status
     {
-        return new Published();
+        return Published::create();
     }
 
     public function schedule(DateTimeImmutable $publishDate): Status
     {
-        return new Scheduled($publishDate);
+        return Scheduled::create($publishDate);
     }
 
     public function addOldSlug(Slug $slug): void

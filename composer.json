@@ -29,6 +29,7 @@
   },
   "require": {
     "league/commonmark": "^1.6",
-    "ezyang/htmlpurifier": "^4.13"
+    "ezyang/htmlpurifier": "^4.13",
+    "ext-pdo": "*"
   }
 }

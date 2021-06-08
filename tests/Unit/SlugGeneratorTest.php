@@ -1,16 +1,16 @@
 <?php
 
-namespace Tests;
+namespace Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Webdevils\Blog\Slug;
-use Webdevils\Blog\SlugGenerator;
-use Webdevils\Blog\SlugRepository;
+use Webdevils\Blog\Slug\SlugGenerator;
+use Webdevils\Blog\Slug\SlugRepository;
 
 class SlugGeneratorTest extends TestCase
 {
     private SlugGenerator $generator;
-    private $repository;
+    private SlugRepository $repository;
 
     protected function setUp() : void
     {

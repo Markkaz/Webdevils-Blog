@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Parsers;
+namespace Tests\Unit\Parsers;
 
 use PHPUnit\Framework\TestCase;
 use Webdevils\Blog\Parsers\MarkdownParser;

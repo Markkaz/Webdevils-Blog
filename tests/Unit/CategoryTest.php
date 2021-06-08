@@ -1,12 +1,12 @@
 <?php
 
-namespace Tests;
+namespace Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Webdevils\Blog\Category;
 use Webdevils\Blog\Exceptions\InvalidCategory;
 use Webdevils\Blog\Slug;
-use Webdevils\Blog\SlugGenerator;
+use Webdevils\Blog\Slug\SlugGenerator;
 
 class CategoryTest extends TestCase
 {
@@ -25,7 +25,7 @@ class CategoryTest extends TestCase
                 ->willReturn(new Slug($slug));
         }
 
-        return new Category(
+        return Category::create(
             $generator,
             $name
         );

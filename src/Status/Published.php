@@ -16,11 +16,20 @@ class Published implements Status
     private DateTimeImmutable $publishDate;
     private array $oldSlugs = [];
 
-    public function __construct()
+    private function __construct(DateTimeImmutable $publishDate)
     {
-        $this->publishDate = new DateTimeImmutable('now');
+        $this->publishDate = $publishDate;
     }
 
+    public static function create() : Published
+    {
+        return new Published(new DateTimeImmutable('now'));
+    }
+
+    public static function hydrate(DateTimeImmutable $publishDate) : Published
+    {
+        return new Published($publishDate);
+    }
 
     public function getName(): string
     {
